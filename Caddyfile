@@ -1,0 +1,15 @@
+:80 {
+    handle /api/* {
+        reverse_proxy fastapi-backend:8000
+    }
+
+    handle /n8n/* {
+        reverse_proxy n8n:5678
+    }
+
+    handle {
+        reverse_proxy vue-frontend:80
+    }
+
+    encode gzip
+}
