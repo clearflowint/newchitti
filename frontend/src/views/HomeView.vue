@@ -14,7 +14,7 @@
       <p class="text-xs sm:text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
         {{ isNewCustomer 
           ? "Welcome to ClearFlow Automations! Let's get your chit fund setup started by creating your first group."
-          : "Welcome to your workspace. Choose an option below to manage your chit funds."
+          : "Welcome to your workspace. Create a new chitti group or select an active circle."
         }}
       </p>
     </div>
@@ -47,71 +47,19 @@
         </div>
       </router-link>
 
-      <!-- Option 2: Select a Chitti from Side Bar for Existing Managers -->
-      <div
-        id="home-select-chitti-card"
-        class="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-sm"
-      >
-        <div class="flex items-center justify-between gap-2">
-          <div>
-            <h3 class="text-sm sm:text-base font-bold text-slate-200">
-              Select a chitti from side bar for existing managers
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">
-              {{ hasActiveCircles ? 'Or pick an active circle directly below:' : 'Open the sidebar menu to view managed circles:' }}
-            </p>
-          </div>
-
-          <div class="flex items-center gap-1.5 shrink-0">
-            <!-- Manager Personal Ledger Button (if manager has active circles) -->
-            <button
-              v-if="hasActiveCircles"
-              type="button"
-              @click="isManagerLedgerOpen = true"
-              class="px-2.5 py-1.5 rounded-xl bg-purple-900/30 hover:bg-purple-800/40 text-purple-300 border border-purple-700/40 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
-              title="View Manager Personal Ledger"
-            >
-              <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
-              <span>Manager Ledger</span>
-            </button>
-
-            <!-- View All Groups Button -->
-            <router-link
-              v-if="hasActiveCircles"
-              to="/groups"
-              class="px-2.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
-              title="Manage all groups with delete options"
-            >
-              <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-              </svg>
-              <span>All Groups ({{ groups.length }})</span>
-            </router-link>
-
-            <!-- Open Sidebar Button -->
-            <button
-              type="button"
-              @click="openSidebar"
-              class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Open side bar to select chitti"
-            >
-              <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-              </svg>
-              <span>Sidebar</span>
-            </button>
-          </div>
+      <!-- Active Chitti Circles (for existing managers with active circles) -->
+      <div v-if="hasActiveCircles" class="space-y-3 pt-2">
+        <div class="flex items-center justify-between px-1">
+          <h2 class="text-sm font-bold text-slate-300">Active Circles</h2>
+          <span class="text-xs text-slate-500 font-mono">{{ groups.length }} Total</span>
         </div>
 
-        <!-- If Existing Circles Exist: One-Click Circle Jump Cards -->
-        <div v-if="hasActiveCircles" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div
             v-for="g in groups"
             :key="g.Chitti_ID"
             @click="navigateToGroup(g.Chitti_ID)"
-            class="p-3.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 cursor-pointer transition-all flex items-center justify-between text-xs group"
+            class="p-3.5 rounded-xl bg-slate-900 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 cursor-pointer transition-all flex items-center justify-between text-xs group"
           >
             <div class="min-w-0 pr-2 space-y-0.5">
               <div class="flex items-center gap-1.5">
@@ -133,19 +81,6 @@
               Open &rarr;
             </span>
           </div>
-        </div>
-
-        <!-- If New Customer with No Circles Yet: Friendly Empty Helper -->
-        <div v-else class="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 text-center space-y-2">
-          <p class="text-xs text-slate-400 leading-relaxed">
-            No circles configured yet. Once you create your first chitti group, it will appear here and in your sidebar router.
-          </p>
-          <router-link
-            to="/onboarding"
-            class="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold"
-          >
-            <span>Start Onboarding Wizard &rarr;</span>
-          </router-link>
         </div>
       </div>
     </div>
@@ -171,44 +106,19 @@
         </button>
       </div>
     </div>
-
-    <!-- Manager Personal Ledger Modal -->
-    <ManagerPersonalLedgerModal
-      :is-open="isManagerLedgerOpen"
-      :ledger="managerLedgerData"
-      @close="isManagerLedgerOpen = false"
-    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useManagerWorkspace } from '../composables/useManagerWorkspace';
-import { useSidebar } from '../composables/useSidebar';
-import { calculateManagerPersonalLedger } from '../composables/chitti_math_engine';
-import ManagerPersonalLedgerModal from '../components/ManagerPersonalLedgerModal.vue';
 
 const router = useRouter();
 const { manager, groups, isNewCustomer, setCustomerType } = useManagerWorkspace();
-const { openSidebar } = useSidebar();
-
-const isManagerLedgerOpen = ref(false);
 
 const hasActiveCircles = computed(() => {
   return !isNewCustomer.value && Array.isArray(groups.value) && groups.value.length > 0;
-});
-
-const activeCircleForLedger = computed(() => {
-  return groups.value && groups.value.length > 0 ? groups.value[0] : null;
-});
-
-const managerLedgerData = computed(() => {
-  if (!activeCircleForLedger.value) return null;
-  return calculateManagerPersonalLedger({
-    chitti: activeCircleForLedger.value,
-    activeMonth: activeCircleForLedger.value.Current_Month || 1
-  });
 });
 
 const navigateToGroup = (chittiId) => {

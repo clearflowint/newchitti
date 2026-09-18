@@ -14,8 +14,7 @@ const routes = [
   },
   {
     path: '/groups',
-    name: 'ManageGroups',
-    component: () => import('../views/ManageGroupsView.vue')
+    redirect: '/'
   },
   {
     path: '/groups/:chittiId',

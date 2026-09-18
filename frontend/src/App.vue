@@ -44,8 +44,8 @@
           </template>
         </div>
 
-        <!-- Right: ClearFlow Automations in very small letters -->
-        <div class="flex items-center">
+        <!-- Right: ClearFlow Automations -->
+        <div class="flex items-center gap-2">
           <span class="text-[11px] text-slate-400 font-normal tracking-tight">
             ClearFlow Automations
           </span>
@@ -57,7 +57,7 @@
     <div
       v-if="isSidebarOpen"
       class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm transition-opacity"
-      @click="isSidebarOpen = false"
+      @click="closeSidebar"
     >
       <aside
         class="fixed top-0 bottom-0 left-0 w-72 sm:w-80 bg-slate-950 border-r border-slate-800 flex flex-col shadow-2xl z-50 animate-in slide-in-from-left duration-200"
@@ -77,7 +77,7 @@
 
           <button
             type="button"
-            @click="isSidebarOpen = false"
+            @click="closeSidebar"
             class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors text-lg"
           >
             &times;
@@ -86,27 +86,6 @@
 
         <!-- Chitti Groups Router List -->
         <div class="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-          <!-- Manage All Groups Dedicated Page Route from Sidebar -->
-          <div>
-            <router-link
-              id="sidebar-manage-all-groups-btn"
-              to="/groups"
-              @click="closeSidebar"
-              class="w-full py-2.5 px-3 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 text-blue-300 border border-blue-500/30 font-semibold text-xs transition-colors flex items-center justify-between"
-              title="View & Manage All Chitti Groups"
-            >
-              <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                </svg>
-                <span>Manage All Groups</span>
-              </div>
-              <span class="text-[10px] text-blue-300 font-mono px-1.5 py-0.5 rounded bg-blue-500/20">
-                {{ groups.length }} Circles &rarr;
-              </span>
-            </router-link>
-          </div>
-
           <div class="flex items-center justify-between px-1 mb-1 pt-1">
             <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Quick Select Circle</span>
             <span class="text-[10px] font-mono text-slate-500">
@@ -168,25 +147,6 @@
               </div>
             </div>
           </template>
-
-          <!-- Manager Personal Ledger Button (Visible when circles exist) -->
-          <div v-if="!isNewCustomer && groups.length > 0" class="pt-2">
-            <button
-              id="sidebar-manager-ledger-btn"
-              type="button"
-              @click="openManagerLedger"
-              class="w-full py-2 px-3 rounded-xl bg-purple-900/25 hover:bg-purple-900/40 text-purple-300 border border-purple-700/40 font-semibold text-xs transition-colors flex items-center justify-between"
-              title="View Manager Personal Ledger"
-            >
-              <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                </svg>
-                <span>Manager Personal Ledger</span>
-              </div>
-              <span class="text-[10px] text-purple-300 font-mono">View &rarr;</span>
-            </button>
-          </div>
 
           <!-- Sign Out Button under group names as requested -->
           <div class="pt-2">
@@ -255,51 +215,19 @@
         Thankyou for using ClearFlow Automations
       </p>
     </footer>
-
-    <!-- Manager Personal Ledger Modal available from Sidebar across the app -->
-    <ManagerPersonalLedgerModal
-      :is-open="isManagerLedgerOpen"
-      :ledger="managerLedgerData"
-      @close="isManagerLedgerOpen = false"
-    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useManagerWorkspace } from './composables/useManagerWorkspace';
 import { useSidebar } from './composables/useSidebar';
-import { calculateManagerPersonalLedger } from './composables/chitti_math_engine';
-import ManagerPersonalLedgerModal from './components/ManagerPersonalLedgerModal.vue';
 
 const route = useRoute();
 const router = useRouter();
 const { manager, groups, isNewCustomer, resetToSample, signOut } = useManagerWorkspace();
 const { isSidebarOpen, openSidebar, closeSidebar } = useSidebar();
-
-const isManagerLedgerOpen = ref(false);
-
-const activeGroupForLedger = computed(() => {
-  if (route.params.chittiId) {
-    const found = groups.value.find((g) => g.Chitti_ID === route.params.chittiId);
-    if (found) return found;
-  }
-  return groups.value[0] || null;
-});
-
-const managerLedgerData = computed(() => {
-  if (!activeGroupForLedger.value) return null;
-  return calculateManagerPersonalLedger({
-    chitti: activeGroupForLedger.value,
-    activeMonth: activeGroupForLedger.value.Current_Month || 1
-  });
-});
-
-const openManagerLedger = () => {
-  closeSidebar();
-  isManagerLedgerOpen.value = true;
-};
 
 // Active circle ID is ONLY present when the user is explicitly viewing a chitti group (/groups/:chittiId).
 // On Home (/), Onboarding (/onboarding), etc., it is null so no default chitti ID leaks into the header.

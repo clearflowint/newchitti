@@ -54,21 +54,8 @@
             </div>
           </div>
 
-          <!-- Action Triggers: Manager Personal Ledger, Month Statement, and Month Stepper -->
+          <!-- Action Triggers: Month Statement and Month Stepper -->
           <div class="flex items-center gap-1.5 shrink-0 mt-0.5">
-            <!-- Manager Personal Ledger Button -->
-            <button
-              type="button"
-              @click="isManagerLedgerOpen = true"
-              class="text-[11px] px-2 py-1 rounded-lg bg-purple-900/40 hover:bg-purple-800/50 text-purple-300 border border-purple-700/50 transition-colors flex items-center gap-1 shrink-0"
-              title="View Manager Personal Ledger (Commission, Foreman Share, Pocket Cash)"
-            >
-              <svg class="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
-              <span>Manager Ledger</span>
-            </button>
-
             <!-- One-Click Month Statement Button -->
             <button
               type="button"
@@ -229,7 +216,20 @@
           <span class="text-[10px] text-slate-500 font-mono">Cycle M{{ activeCycleMonth }} of {{ totalMonths }}</span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <!-- Manager Personal Ledger Button -->
+          <button
+            type="button"
+            @click="isManagerLedgerOpen = true"
+            class="py-2.5 px-3 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 text-purple-200 border border-purple-800/60 hover:border-purple-700 text-xs font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm"
+            title="View Manager Personal Ledger (Commission, Foreman Share, Pocket Cash)"
+          >
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            <span>Manager Ledger</span>
+          </button>
+
           <!-- Download Full Circle Statement PDF -->
           <button
             type="button"
@@ -240,7 +240,7 @@
             <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            <span>Download Overall Statement PDF</span>
+            <span>Download Statement PDF</span>
           </button>
 
           <!-- WhatsApp Reminders Trigger -->
@@ -254,7 +254,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
             </svg>
             <span v-if="isTriggeringWebhook">Sending Reminders...</span>
-            <span v-else>Send WhatsApp Reminders ({{ pendingCount }} Pending)</span>
+            <span v-else>WhatsApp Reminders ({{ pendingCount }})</span>
           </button>
         </div>
       </section>

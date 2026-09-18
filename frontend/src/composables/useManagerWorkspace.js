@@ -64,23 +64,27 @@ const persistGroups = () => {
 };
 
 export function useManagerWorkspace() {
+  const getTenantHeaders = () => {
+    const tid = manager.value?.Tenant_ID || `TNT-${manager.value?.Manager_ID || '840192'}`;
+    return { 'x-tenant-id': tid };
+  };
+
   const fetchWorkspace = async () => {
     isLoading.value = true;
     error.value = null;
 
     try {
-      const meRes = await axios.get('/api/auth/me', { timeout: 1500 });
-      if (meRes?.data) {
-        manager.value = meRes.data;
-        isSampleWorkspace.value = false;
-      }
-      const chittisRes = await axios.get('/api/chittis', { timeout: 1500 });
-      if (Array.isArray(chittisRes?.data) && chittisRes.data.length > 0) {
-        groups.value = chittisRes.data;
+      const headers = getTenantHeaders();
+      const chittisRes = await axios.get('/api/chittis', { headers, timeout: 2500 });
+      const fetchedList = chittisRes.data?.groups || (Array.isArray(chittisRes.data) ? chittisRes.data : []);
+
+      if (fetchedList.length > 0) {
+        groups.value = fetchedList;
         isSampleWorkspace.value = false;
         persistGroups();
       }
     } catch (err) {
+      console.warn('[Workspace] Backend fetch fallback to local cache:', err.message);
       if (!groups.value || groups.value.length === 0) {
         groups.value = JSON.parse(JSON.stringify(sampleGroups));
       }
@@ -93,7 +97,7 @@ export function useManagerWorkspace() {
     }
   };
 
-  const addGroup = (newGroup) => {
+  const addGroup = async (newGroup) => {
     const S = Number(newGroup.Total_Members || newGroup.Total_Shares || 20);
     const M = Number(newGroup.Total_Months || 20);
     const C = Number(newGroup.Monthly_Commission || 4000);
@@ -119,47 +123,40 @@ export function useManagerWorkspace() {
       Monthly_Commission: C,
       Drawn_Due: D_drawn,
       Undrawn_Due: D_undrawn,
-      Cycle_Anchor_Day: newGroup.Cycle_Anchor_Day || '10th to 10th',
+      Cycle_Anchor_Day: newGroup.Cycle_Anchor_Day || 10,
       Start_Date: newGroup.Start_Date || new Date().toISOString().split('T')[0],
       Status: 'Active',
       Is_Sample: false
     };
 
-    // If custom members list is provided, persist it directly to sharesMap storage
-    if (Array.isArray(newGroup.members) && newGroup.members.length > 0) {
-      try {
-        let sharesStore = {};
-        const saved = localStorage.getItem(STORAGE_SHARES_KEY);
-        if (saved) {
-          sharesStore = JSON.parse(saved);
-        }
-        const allocatedShareIds = [];
-        sharesStore[cid] = newGroup.members.map((m, idx) => {
-          const shareId = String(m.Share_ID || generateUnique6DigitId()).trim();
-          allocatedShareIds.push(shareId);
-          return {
-            Share_ID: shareId,
-            Share_Number: idx + 1,
-            Chitti_ID: cid,
-            Member_Name: m.Member_Name || `Member ${idx + 1}`,
-            Phone_Number: m.Phone_Number || m.Phone || '+91 98000 00000',
-            Phone: m.Phone_Number || m.Phone || '+91 98000 00000',
-            Draw_Status: 'Undrawn',
-            Month_Drawn: null,
-            Advance_Credit: 0
-          };
-        });
-        registerAllocatedIds(allocatedShareIds);
-        localStorage.setItem(STORAGE_SHARES_KEY, JSON.stringify(sharesStore));
-      } catch (e) {
-        console.warn('Failed to seed custom members to storage:', e);
-      }
-    }
+    // Prepare members payload
+    const membersPayload = Array.isArray(newGroup.members) ? newGroup.members : [];
 
+    // Optimistic UI insertion immediately
     groups.value.unshift(created);
     isSampleWorkspace.value = false;
     setCustomerType('existing');
     persistGroups();
+
+    // Fire API call to backend
+    try {
+      const headers = getTenantHeaders();
+      const resp = await axios.post(
+        '/api/chittis',
+        {
+          ...created,
+          members: membersPayload
+        },
+        { headers, timeout: 5000 }
+      );
+
+      if (resp.data?.group?.Global_ID) {
+        created.Global_ID = resp.data.group.Global_ID;
+      }
+    } catch (err) {
+      console.warn('[Workspace] API save warning, retained in local store:', err.message);
+    }
+
     return created;
   };
 
@@ -167,7 +164,7 @@ export function useManagerWorkspace() {
     return groups.value.find((g) => g.Chitti_ID === chittiId) || null;
   };
 
-  const deleteGroup = (chittiId) => {
+  const deleteGroup = async (chittiId) => {
     if (!chittiId) return false;
     const initialCount = groups.value.length;
     groups.value = groups.value.filter((g) => g.Chitti_ID !== chittiId);
@@ -194,10 +191,19 @@ export function useManagerWorkspace() {
       setCustomerType('new');
     }
     persistGroups();
+
+    // Notify backend queue
+    try {
+      const headers = getTenantHeaders();
+      await axios.delete(`/api/chittis/${chittiId}`, { headers, timeout: 2500 });
+    } catch (e) {
+      console.warn('[Workspace] Delete queue dispatch warning:', e.message);
+    }
+
     return groups.value.length < initialCount;
   };
 
-  const resetToSample = () => {
+  const resetToSample = async () => {
     groups.value = JSON.parse(JSON.stringify(sampleGroups));
     manager.value = { ...sampleManager };
     isSampleWorkspace.value = true;
@@ -206,6 +212,13 @@ export function useManagerWorkspace() {
     localStorage.removeItem(STORAGE_KEY_MANAGER);
     localStorage.removeItem(STORAGE_SHARES_KEY);
     localStorage.removeItem('clearflow_txns_store_v2');
+
+    try {
+      const headers = getTenantHeaders();
+      await axios.post('/api/sync/reset', {}, { headers, timeout: 2500 });
+    } catch (e) {
+      console.warn('[Workspace] Reset sync warning:', e.message);
+    }
   };
 
   const signOut = () => {
