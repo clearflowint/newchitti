@@ -60,7 +60,7 @@
                 class="block text-[10px] font-bold uppercase mt-1 px-1.5 py-0.5 rounded border text-center font-mono"
                 :class="share.Draw_Status === 'Drawn' ? 'bg-purple-50 text-purple-800 border-purple-300' : 'bg-amber-50 text-amber-800 border-amber-300'"
               >
-                {{ share.Draw_Status === 'Drawn' ? `Drawn (Month ${share.Month_Drawn || '—'})` : 'Undrawn Saver' }}
+                {{ share.Draw_Status === 'Drawn' ? `Drawn (Month ${share.Month_Drawn || '—'})` : 'Undrawn' }}
               </span>
             </div>
           </div>
@@ -86,28 +86,28 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-mono">
           <div class="bg-slate-50 p-2 rounded-lg border border-slate-200">
             <span class="text-[10px] font-sans text-slate-500 block uppercase font-semibold">Total Due</span>
-            <strong class="text-slate-900 text-sm font-bold">₹{{ totalDue.toLocaleString('en-IN') }}</strong>
+            <strong class="text-slate-900 text-sm font-bold">₹{{ displayTotalDue.toLocaleString('en-IN') }}</strong>
           </div>
 
           <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-200">
             <span class="text-[10px] font-sans text-emerald-800 block uppercase font-semibold">Total Paid</span>
-            <strong class="text-emerald-900 text-sm font-bold">₹{{ totalPaid.toLocaleString('en-IN') }}</strong>
+            <strong class="text-emerald-900 text-sm font-bold">₹{{ displayTotalPaid.toLocaleString('en-IN') }}</strong>
           </div>
 
           <div
             class="p-2 rounded-lg border"
-            :class="outstandingBalance > 0 ? 'bg-red-50 border-red-200 text-red-900' : 'bg-slate-50 border-slate-200 text-slate-700'"
+            :class="displayOutstanding > 0 ? 'bg-red-50 border-red-200 text-red-900' : 'bg-slate-50 border-slate-200 text-slate-700'"
           >
-            <span class="text-[10px] font-sans block uppercase font-semibold" :class="outstandingBalance > 0 ? 'text-red-800' : 'text-slate-500'">
+            <span class="text-[10px] font-sans block uppercase font-semibold" :class="displayOutstanding > 0 ? 'text-red-800' : 'text-slate-500'">
               Pending Dues
             </span>
-            <strong class="text-sm font-bold">₹{{ outstandingBalance.toLocaleString('en-IN') }}</strong>
+            <strong class="text-sm font-bold">₹{{ displayOutstanding.toLocaleString('en-IN') }}</strong>
           </div>
 
           <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
             <span class="text-[10px] font-sans text-blue-800 block uppercase font-semibold">Advance Credit</span>
             <strong class="text-blue-900 text-sm font-bold">
-              ₹{{ (Number(share?.Advance_Credit) || 0).toLocaleString('en-IN') }}
+              ₹{{ displayAdvanceCredit.toLocaleString('en-IN') }}
             </strong>
           </div>
         </div>
@@ -126,14 +126,14 @@
             </thead>
             <tbody class="divide-y divide-slate-200">
               <tr
-                v-for="txn in statement"
-                :key="txn.Month_Number"
-                :class="txn.Month_Number === currentMonth ? 'bg-blue-50/70 font-semibold' : ''"
+                v-for="txn in displayRecords"
+                :key="txn.monthNumber"
+                :class="txn.monthNumber === currentMonth ? 'bg-blue-50/70 font-semibold' : ''"
               >
                 <td class="py-2 px-2.5">
                   <div class="flex items-center gap-1">
-                    <span class="font-bold">M{{ txn.Month_Number }}</span>
-                    <span v-if="txn.Month_Number === currentMonth" class="text-[9px] bg-blue-600 text-white px-1 py-0.2 rounded font-sans">
+                    <span class="font-bold">M{{ txn.monthNumber }}</span>
+                    <span v-if="txn.monthNumber === currentMonth" class="text-[9px] bg-blue-600 text-white px-1 py-0.2 rounded font-sans">
                       Active
                     </span>
                   </div>
@@ -143,28 +143,28 @@
                   <span
                     class="inline-block px-1.5 py-0.2 rounded font-medium text-[10px]"
                     :class="{
-                      'bg-emerald-100 text-emerald-900': txn.Payment_Status === 'Paid' || txn.Payment_Status === 'Verified',
-                      'bg-amber-100 text-amber-900': txn.Payment_Status === 'Partial',
-                      'bg-red-100 text-red-900': txn.Payment_Status === 'Pending'
+                      'bg-emerald-100 text-emerald-900': txn.paymentStatus === 'Paid' || txn.paymentStatus === 'Verified',
+                      'bg-amber-100 text-amber-900': txn.paymentStatus === 'Partial',
+                      'bg-red-100 text-red-900': txn.paymentStatus === 'Pending'
                     }"
                   >
-                    {{ (txn.Payment_Status === 'Verified' || txn.Payment_Status === 'Paid') ? 'Paid' : txn.Payment_Status }}
+                    {{ (txn.paymentStatus === 'Verified' || txn.paymentStatus === 'Paid') ? 'Paid' : txn.paymentStatus }}
                   </span>
                 </td>
 
                 <td class="py-2 px-2.5 text-right font-medium">
-                  ₹{{ Number(txn.Amount_Due || 0).toLocaleString('en-IN') }}
+                  ₹{{ Number(txn.amountDue || 0).toLocaleString('en-IN') }}
                 </td>
 
                 <td class="py-2 px-2.5 text-right font-bold text-emerald-700">
-                  ₹{{ Number(txn.Amount_Paid || 0).toLocaleString('en-IN') }}
+                  ₹{{ Number(txn.amountPaid || 0).toLocaleString('en-IN') }}
                 </td>
 
                 <td
                   class="py-2 px-2.5 text-right font-bold"
-                  :class="Number(txn.Pending_Dues || 0) > 0 ? 'text-red-700' : 'text-slate-400'"
+                  :class="Number(txn.pendingDues || 0) > 0 ? 'text-red-700' : 'text-slate-400'"
                 >
-                  ₹{{ Number(txn.Pending_Dues || 0).toLocaleString('en-IN') }}
+                  ₹{{ Number(txn.pendingDues || 0).toLocaleString('en-IN') }}
                 </td>
               </tr>
             </tbody>
@@ -197,6 +197,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { calculateShareStatementData } from '../composables/chitti_math_engine';
 
 const props = defineProps({
   isOpen: {
@@ -218,34 +219,48 @@ const props = defineProps({
   currentMonth: {
     type: Number,
     default: 1
+  },
+  preloadedData: {
+    type: Object,
+    default: null
   }
 });
 
 defineEmits(['close']);
 
-const totalDue = computed(() => {
-  return props.statement.reduce((acc, t) => acc + (Number(t.Amount_Due) || 0), 0);
+// Preloaded JSON statement from math engine or computed fallback
+const statementSnippet = computed(() => {
+  if (props.preloadedData) return props.preloadedData;
+  return calculateShareStatementData({
+    chitti: props.chitti,
+    share: props.share,
+    statement: props.statement,
+    currentMonth: props.currentMonth
+  });
 });
 
-const totalPaid = computed(() => {
-  return props.statement.reduce((acc, t) => acc + (Number(t.Amount_Paid) || 0), 0);
-});
-
-const outstandingBalance = computed(() => {
-  return Math.max(0, totalDue.value - totalPaid.value);
-});
+const displayTotalDue = computed(() => statementSnippet.value?.totalDue ?? 0);
+const displayTotalPaid = computed(() => statementSnippet.value?.totalPaid ?? 0);
+const displayOutstanding = computed(() => statementSnippet.value?.outstandingBalance ?? 0);
+const displayAdvanceCredit = computed(() => statementSnippet.value?.advanceCredit ?? 0);
+const displayRecords = computed(() => statementSnippet.value?.records ?? []);
 
 const copyStatementToClipboard = () => {
+  if (statementSnippet.value?.summaryText) {
+    navigator.clipboard.writeText(statementSnippet.value.summaryText);
+    alert('Statement summary copied to clipboard!');
+    return;
+  }
   if (!props.share) return;
   let text = `📄 *CLEARFLOW CHITTI STATEMENT*\n`;
   text += `Member: ${props.share.Member_Name} (#${props.share.Share_Number})\n`;
   text += `Share ID: ${props.share.Share_ID}\n`;
   text += `Group: ${props.chitti?.Chitti_Name || props.chitti?.Chitti_ID || ''}\n`;
   text += `Draw Status: ${props.share.Draw_Status}\n\n`;
-  text += `• Total Due: ₹${totalDue.value.toLocaleString('en-IN')}\n`;
-  text += `• Total Paid: ₹${totalPaid.value.toLocaleString('en-IN')}\n`;
-  text += `• Pending Dues: ₹${outstandingBalance.value.toLocaleString('en-IN')}\n`;
-  text += `• Advance Credit: ₹${(Number(props.share.Advance_Credit) || 0).toLocaleString('en-IN')}\n\n`;
+  text += `• Total Due: ₹${displayTotalDue.value.toLocaleString('en-IN')}\n`;
+  text += `• Total Paid: ₹${displayTotalPaid.value.toLocaleString('en-IN')}\n`;
+  text += `• Pending Dues: ₹${displayOutstanding.value.toLocaleString('en-IN')}\n`;
+  text += `• Advance Credit: ₹${displayAdvanceCredit.value.toLocaleString('en-IN')}\n\n`;
   text += `Cycle Month: M${props.currentMonth}\n`;
   navigator.clipboard.writeText(text);
   alert('Statement summary copied to clipboard!');

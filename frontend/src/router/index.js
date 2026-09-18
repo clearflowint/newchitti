@@ -1,18 +1,26 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import HomeView from '../views/HomeView.vue';
+import ChittiCircleView from '../views/ChittiCircleView.vue';
 
 const routes = [
   {
     path: '/',
-    redirect: '/groups/CHT-2026-A'
+    name: 'Home',
+    component: HomeView
   },
   {
     path: '/home',
-    redirect: '/groups/CHT-2026-A'
+    redirect: '/'
+  },
+  {
+    path: '/groups',
+    name: 'ManageGroups',
+    component: () => import('../views/ManageGroupsView.vue')
   },
   {
     path: '/groups/:chittiId',
     name: 'GroupDetail',
-    component: () => import('../views/HomeView.vue')
+    component: ChittiCircleView
   },
   {
     path: '/onboarding',
@@ -31,11 +39,11 @@ const routes = [
   },
   {
     path: '/summary',
-    redirect: '/home'
+    redirect: '/'
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/home'
+    redirect: '/'
   }
 ];
 

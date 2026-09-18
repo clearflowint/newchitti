@@ -1,16 +1,34 @@
 import { ref, computed } from 'vue';
 import axios from 'axios';
 import { sampleManager, sampleGroups } from './sampleWorkspace';
+import { generateUnique6DigitId, registerAllocatedId, registerAllocatedIds } from '../utils/idGenerator';
 
 const STORAGE_KEY_GROUPS = 'clearflow_manager_groups_v2';
 const STORAGE_KEY_MANAGER = 'clearflow_manager_user_v2';
 const STORAGE_SHARES_KEY = 'clearflow_shares_store_v2';
+const STORAGE_KEY_CUSTOMER_TYPE = 'clearflow_customer_type_v2';
 
 const manager = ref(null);
 const groups = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
 const isSampleWorkspace = ref(false);
+const customerType = ref(localStorage.getItem(STORAGE_KEY_CUSTOMER_TYPE) || 'existing');
+
+const isNewCustomer = computed(() => {
+  return customerType.value === 'new' || (!groups.value || groups.value.length === 0);
+});
+
+const isExistingCustomer = computed(() => {
+  return !isNewCustomer.value && Boolean(groups.value && groups.value.length > 0);
+});
+
+const setCustomerType = (type) => {
+  customerType.value = type;
+  try {
+    localStorage.setItem(STORAGE_KEY_CUSTOMER_TYPE, type);
+  } catch (e) {}
+};
 
 const loadPersistedData = () => {
   try {
@@ -86,11 +104,12 @@ export function useManagerWorkspace() {
       throw new Error('Drawn Due cannot be less than Undrawn Due');
     }
 
-    const cid = newGroup.Chitti_ID || `CHT-${Date.now().toString().slice(-4)}`;
+    const cid = String(newGroup.Chitti_ID || generateUnique6DigitId()).trim();
+    registerAllocatedId(cid);
 
     const created = {
       Chitti_ID: cid,
-      Manager_ID: manager.value?.Manager_ID || 'MGR-001',
+      Manager_ID: manager.value?.Manager_ID || '840192',
       Chitti_Name: newGroup.Chitti_Name || 'New Chitti Group',
       Rule_Template: newGroup.Rule_Template || 'Incremental Model V1',
       Total_Members: S,
@@ -114,17 +133,23 @@ export function useManagerWorkspace() {
         if (saved) {
           sharesStore = JSON.parse(saved);
         }
-        sharesStore[cid] = newGroup.members.map((m, idx) => ({
-          Share_ID: m.Share_ID || `${cid}-S${String(idx + 1).padStart(2, '0')}`,
-          Share_Number: idx + 1,
-          Chitti_ID: cid,
-          Member_Name: m.Member_Name || `Member ${idx + 1}`,
-          Phone_Number: m.Phone_Number || m.Phone || '+91 98000 00000',
-          Phone: m.Phone_Number || m.Phone || '+91 98000 00000',
-          Draw_Status: 'Undrawn',
-          Month_Drawn: null,
-          Advance_Credit: 0
-        }));
+        const allocatedShareIds = [];
+        sharesStore[cid] = newGroup.members.map((m, idx) => {
+          const shareId = String(m.Share_ID || generateUnique6DigitId()).trim();
+          allocatedShareIds.push(shareId);
+          return {
+            Share_ID: shareId,
+            Share_Number: idx + 1,
+            Chitti_ID: cid,
+            Member_Name: m.Member_Name || `Member ${idx + 1}`,
+            Phone_Number: m.Phone_Number || m.Phone || '+91 98000 00000',
+            Phone: m.Phone_Number || m.Phone || '+91 98000 00000',
+            Draw_Status: 'Undrawn',
+            Month_Drawn: null,
+            Advance_Credit: 0
+          };
+        });
+        registerAllocatedIds(allocatedShareIds);
         localStorage.setItem(STORAGE_SHARES_KEY, JSON.stringify(sharesStore));
       } catch (e) {
         console.warn('Failed to seed custom members to storage:', e);
@@ -133,6 +158,7 @@ export function useManagerWorkspace() {
 
     groups.value.unshift(created);
     isSampleWorkspace.value = false;
+    setCustomerType('existing');
     persistGroups();
     return created;
   };
@@ -141,14 +167,52 @@ export function useManagerWorkspace() {
     return groups.value.find((g) => g.Chitti_ID === chittiId) || null;
   };
 
+  const deleteGroup = (chittiId) => {
+    if (!chittiId) return false;
+    const initialCount = groups.value.length;
+    groups.value = groups.value.filter((g) => g.Chitti_ID !== chittiId);
+
+    // Clean up stored shares and transactions for this chittiId
+    try {
+      const sharesRaw = localStorage.getItem(STORAGE_SHARES_KEY);
+      if (sharesRaw) {
+        const sharesStore = JSON.parse(sharesRaw);
+        delete sharesStore[chittiId];
+        localStorage.setItem(STORAGE_SHARES_KEY, JSON.stringify(sharesStore));
+      }
+      const txnsRaw = localStorage.getItem('clearflow_txns_v2');
+      if (txnsRaw) {
+        const txnsStore = JSON.parse(txnsRaw);
+        delete txnsStore[chittiId];
+        localStorage.setItem('clearflow_txns_v2', JSON.stringify(txnsStore));
+      }
+    } catch (e) {
+      console.warn('Failed to clean up shares/txns for deleted group', e);
+    }
+
+    if (groups.value.length === 0) {
+      setCustomerType('new');
+    }
+    persistGroups();
+    return groups.value.length < initialCount;
+  };
+
   const resetToSample = () => {
     groups.value = JSON.parse(JSON.stringify(sampleGroups));
     manager.value = { ...sampleManager };
     isSampleWorkspace.value = true;
+    setCustomerType('existing');
     localStorage.removeItem(STORAGE_KEY_GROUPS);
     localStorage.removeItem(STORAGE_KEY_MANAGER);
     localStorage.removeItem(STORAGE_SHARES_KEY);
     localStorage.removeItem('clearflow_txns_store_v2');
+  };
+
+  const signOut = () => {
+    localStorage.removeItem(STORAGE_KEY_MANAGER);
+    localStorage.removeItem('clearflow_auth_token');
+    localStorage.removeItem(STORAGE_KEY_CUSTOMER_TYPE);
+    manager.value = null;
   };
 
   return {
@@ -157,9 +221,15 @@ export function useManagerWorkspace() {
     isLoading,
     error,
     isSampleWorkspace,
+    customerType,
+    isNewCustomer,
+    isExistingCustomer,
+    setCustomerType,
     fetchWorkspace,
     addGroup,
+    deleteGroup,
     getGroupById,
-    resetToSample
+    resetToSample,
+    signOut
   };
 }

@@ -34,7 +34,7 @@
             M{{ share.Month_Drawn }} &bull; ₹{{ drawnPayoutAmount.toLocaleString('en-IN') }}
           </span>
           <span v-else class="text-slate-400 text-[11px]">
-            Saver
+            Undrawn
           </span>
           <span class="text-slate-600">&bull;</span>
           <button
@@ -82,8 +82,8 @@
             v-model.number="editDrawMonth"
             class="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-slate-200 text-xs font-semibold focus:outline-none focus:border-blue-500 font-mono"
           >
-            <option v-for="m in totalMonths" :key="m" :value="m">
-              Month {{ m }}
+            <option v-for="m in availableDrawMonths" :key="m" :value="m">
+              Month {{ m }} &bull; {{ getMonthYearStr(m) }}
             </option>
           </select>
         </div>
@@ -152,7 +152,7 @@
       </span>
     </div>
 
-    <!-- Bottom Row: 10% Bigger Amount Field with Dropdown option Credit/Debit -->
+    <!-- Bottom Row: Clean Amount Field (No incremental/decremental controls) with Dropdown option Credit/Debit -->
     <div class="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-800/60">
       <div class="flex items-center gap-1.5 flex-1 min-w-0">
         <!-- Dropdown Credit/Debit (Default + Credit) -->
@@ -164,34 +164,23 @@
           <option value="Debit">- Debit</option>
         </select>
 
-        <!-- Amount input field (10% bigger than before, preserving overall card dimensions) -->
-        <div class="relative flex-1 max-w-[155px]">
+        <!-- Amount input field: Clean direct entry with NO incremental or decremental spinners/arrows -->
+        <div class="relative flex-1 max-w-[170px]">
           <input
             type="number"
             v-model.number="enteredAmount"
             :placeholder="pendingDues > 0 ? `₹${pendingDues}` : '₹ Amount'"
-            @keyup.enter="submitQuickEntry"
+            @keyup.enter="promptRecordPayment"
             min="1"
-            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[13px] font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 leading-none"
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[13px] font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
-
-        <!-- Quick 1-Tap Fill Due Button if pending > 0 -->
-        <button
-          v-if="pendingDues > 0 && entryType === 'Credit'"
-          type="button"
-          @click="fillDueAmount"
-          class="text-[10px] text-slate-400 hover:text-red-300 font-mono bg-slate-800/80 px-1.5 py-1.5 rounded border border-slate-700 shrink-0 hidden sm:inline-block"
-          title="Fill exact due"
-        >
-          Due
-        </button>
       </div>
 
-      <!-- Record Button (Replacing 'Post' with 'Record') -->
+      <!-- Record Button (Asks for confirmation in popup before recording) -->
       <button
         type="button"
-        @click="submitQuickEntry"
+        @click="promptRecordPayment"
         :disabled="!enteredAmount || enteredAmount <= 0 || isSubmitting"
         class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0"
         :class="entryType === 'Credit'
@@ -202,12 +191,92 @@
         <span v-else class="text-[10px]">...</span>
       </button>
     </div>
+
+    <!-- Confirmation Popup for Recording Payment -->
+    <div
+      v-if="showRecordConfirmModal"
+      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+      @click.self="showRecordConfirmModal = false"
+    >
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-5 max-w-sm w-full space-y-3.5 shadow-2xl text-left">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <div
+              class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-sm"
+              :class="entryType === 'Credit' ? 'bg-blue-500/20 text-blue-400' : 'bg-rose-500/20 text-rose-400'"
+            >
+              {{ entryType === 'Credit' ? '+' : '-' }}
+            </div>
+            <h3 class="font-bold text-slate-100 text-sm">Confirm Record</h3>
+          </div>
+          <button
+            type="button"
+            @click="showRecordConfirmModal = false"
+            class="text-slate-400 hover:text-slate-200 text-lg leading-none"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-400">Member:</span>
+            <span class="font-bold text-slate-200">{{ share.Member_Name }} (#{{ String(share.Share_Number).padStart(2, '0') }})</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-400">Month:</span>
+            <span class="font-mono text-slate-300">Month {{ monthNumber }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-400">Type:</span>
+            <span
+              class="font-bold px-1.5 py-0.5 rounded text-[10px]"
+              :class="entryType === 'Credit' ? 'bg-blue-500/20 text-blue-300' : 'bg-rose-500/20 text-rose-300'"
+            >
+              {{ entryType === 'Credit' ? '+ Credit' : '- Debit' }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center pt-1.5 border-t border-slate-800">
+            <span class="text-slate-300 font-medium">Amount:</span>
+            <span
+              class="font-mono font-bold text-base"
+              :class="entryType === 'Credit' ? 'text-blue-400' : 'text-rose-400'"
+            >
+              ₹{{ Number(enteredAmount).toLocaleString('en-IN') }}
+            </span>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Are you sure you want to record this {{ entryType.toLowerCase() }} of <strong class="text-slate-100">₹{{ Number(enteredAmount).toLocaleString('en-IN') }}</strong>?
+        </p>
+
+        <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-800">
+          <button
+            type="button"
+            @click="showRecordConfirmModal = false"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            @click="confirmAndRecordPayment"
+            :disabled="isSubmitting"
+            class="px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-all shadow-sm"
+            :class="entryType === 'Credit' ? 'bg-blue-600 hover:bg-blue-500' : 'bg-rose-600 hover:bg-rose-500'"
+          >
+            Confirm &amp; Record
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { calculateMonthMath } from '../composables/chitti_math_engine';
+import { calculateMonthMath, normalizeChittiParams } from '../composables/chitti_math_engine';
 
 const props = defineProps({
   share: { type: Object, required: true },
@@ -222,12 +291,13 @@ const isDrawn = computed(() => props.share?.Draw_Status === 'Drawn');
 const monthNumber = computed(() => props.month || props.transaction?.Month_Number || 1);
 const totalMonths = computed(() => Number(props.chitti?.Total_Months || 20));
 
-// Financial calculations
+// Financial calculations strictly driven by math engine normalization
 const calculatedDue = computed(() => {
   if (props.transaction?.Amount_Due !== undefined) {
     return Number(props.transaction.Amount_Due);
   }
-  return isDrawn.value ? Number(props.chitti?.Drawn_Due || 6000) : Number(props.chitti?.Undrawn_Due || 5000);
+  const norm = normalizeChittiParams(props.chitti);
+  return isDrawn.value ? norm.D_drawn : norm.D_undrawn;
 });
 
 const amountPaid = computed(() => Number(props.transaction?.Amount_Paid || 0));
@@ -267,14 +337,14 @@ const drawnPayoutAmount = computed(() => {
 const entryType = ref('Credit');
 const enteredAmount = ref(null);
 const isSubmitting = ref(false);
+const showRecordConfirmModal = ref(false);
 
-const fillDueAmount = () => {
-  if (pendingDues.value > 0) {
-    enteredAmount.value = pendingDues.value;
-  }
+const promptRecordPayment = () => {
+  if (!enteredAmount.value || enteredAmount.value <= 0) return;
+  showRecordConfirmModal.value = true;
 };
 
-const submitQuickEntry = () => {
+const confirmAndRecordPayment = () => {
   if (!enteredAmount.value || enteredAmount.value <= 0) return;
   isSubmitting.value = true;
   try {
@@ -286,6 +356,7 @@ const submitQuickEntry = () => {
       paymentMode: 'UPI'
     });
     enteredAmount.value = null;
+    showRecordConfirmModal.value = false;
   } finally {
     isSubmitting.value = false;
   }
@@ -296,9 +367,40 @@ const showDrawEditor = ref(false);
 const editDrawStatus = ref('Undrawn');
 const editDrawMonth = ref(1);
 
+// Current official cycle month: future months must not be selectable until cycle passes officially
+const currentOfficialMonth = computed(() => {
+  return Number(props.chitti?.Current_Month || props.month || 1);
+});
+
+const getMonthYearStr = (m) => {
+  const startYear = 2026;
+  const startMonthIndex = 0; // Jan is index 0
+  const totalOffset = startMonthIndex + (Number(m) - 1);
+  const year = startYear + Math.floor(totalOffset / 12);
+  const mIdx = ((totalOffset % 12) + 12) % 12;
+  const d = new Date(year, mIdx, 1);
+  const m3 = d.toLocaleString('en-US', { month: 'short' });
+  return `${m3}${year}`;
+};
+
+// Available Draw Months: strictly up to the current official cycle month (plus currently assigned month if already set)
+const availableDrawMonths = computed(() => {
+  const officialMax = currentOfficialMonth.value;
+  const existingDrawnMonth = Number(props.share?.Month_Drawn || 0);
+  const maxMonth = Math.min(totalMonths.value, Math.max(officialMax, existingDrawnMonth));
+  const list = [];
+  for (let m = 1; m <= maxMonth; m++) {
+    list.push(m);
+  }
+  return list.length > 0 ? list : [1];
+});
+
 const toggleEditDraw = () => {
   editDrawStatus.value = props.share.Draw_Status || 'Undrawn';
-  editDrawMonth.value = Number(props.share.Month_Drawn || monthNumber.value);
+  const initialMonth = Number(props.share.Month_Drawn || currentOfficialMonth.value);
+  editDrawMonth.value = availableDrawMonths.value.includes(initialMonth)
+    ? initialMonth
+    : (availableDrawMonths.value[availableDrawMonths.value.length - 1] || 1);
   showDrawEditor.value = !showDrawEditor.value;
 };
 
@@ -317,7 +419,10 @@ watch(
   (newShare) => {
     if (newShare) {
       editDrawStatus.value = newShare.Draw_Status || 'Undrawn';
-      editDrawMonth.value = Number(newShare.Month_Drawn || monthNumber.value);
+      const initialMonth = Number(newShare.Month_Drawn || currentOfficialMonth.value);
+      editDrawMonth.value = availableDrawMonths.value.includes(initialMonth)
+        ? initialMonth
+        : (availableDrawMonths.value[availableDrawMonths.value.length - 1] || 1);
     }
   },
   { immediate: true, deep: true }

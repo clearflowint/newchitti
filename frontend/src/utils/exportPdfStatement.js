@@ -91,11 +91,11 @@ export function triggerDownloadCirclePdf(chitti, shares = [], transactions = [],
             <div class="summary-val">${totalShares}</div>
           </div>
           <div class="summary-card">
-            <div class="summary-label">Saver Due</div>
+            <div class="summary-label">Undrawn Due</div>
             <div class="summary-val">₹${undrawnDue.toLocaleString('en-IN')}</div>
           </div>
           <div class="summary-card">
-            <div class="summary-label">Prized Due</div>
+            <div class="summary-label">Drawn Due</div>
             <div class="summary-val">₹${drawnDue.toLocaleString('en-IN')}</div>
           </div>
           <div class="summary-card">
@@ -134,4 +134,9 @@ export function triggerDownloadCirclePdf(chitti, shares = [], transactions = [],
   printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
+
+  // Page refresh as requested to prevent holding report generation state in UI
+  setTimeout(() => {
+    window.location.reload();
+  }, 1000);
 }

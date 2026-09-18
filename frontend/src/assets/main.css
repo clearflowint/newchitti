@@ -14,3 +14,14 @@ body {
   color: #F8FAFC;
   min-height: 100vh;
 }
+
+/* Remove incremental and decremental spinner options in amount/number entry fields */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

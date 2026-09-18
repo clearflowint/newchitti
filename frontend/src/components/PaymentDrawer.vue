@@ -67,37 +67,7 @@
         <strong class="text-blue-400 font-mono font-bold">₹{{ advanceCredit.toLocaleString('en-IN') }}</strong>
       </div>
 
-      <!-- Preset Buttons -->
-      <div class="space-y-1.5">
-        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Quick Preset Amount
-        </label>
-        <div class="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            @click="setAmount(remainingDue)"
-            class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold border border-slate-700 transition-colors"
-          >
-            Exact ₹{{ remainingDue.toLocaleString('en-IN') }}
-          </button>
-          <button
-            type="button"
-            @click="setAmount(undrawnDue)"
-            class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-300 text-xs font-mono font-bold border border-slate-700 transition-colors"
-          >
-            ₹{{ undrawnDue.toLocaleString('en-IN') }} (Saver)
-          </button>
-          <button
-            type="button"
-            @click="setAmount(drawnDue)"
-            class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-mono font-bold border border-slate-700 transition-colors"
-          >
-            ₹{{ drawnDue.toLocaleString('en-IN') }} (Prized)
-          </button>
-        </div>
-      </div>
-
-      <!-- Custom Amount Input Field -->
+      <!-- Custom Amount Input Field (No incremental/decremental controls) -->
       <div class="space-y-1.5">
         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
           Payment Amount (₹) <span class="text-rose-400">*</span>
@@ -109,7 +79,7 @@
             type="number"
             min="1"
             placeholder="Enter payment amount"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-4 py-2.5 text-slate-100 font-mono text-base font-bold focus:outline-none focus:border-blue-500"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-4 py-2.5 text-slate-100 font-mono text-base font-bold focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
       </div>
